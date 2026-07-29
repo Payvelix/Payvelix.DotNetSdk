@@ -1,4 +1,8 @@
 # PayVelix Client
+[![PayVelix NuGet](https://img.shields.io/nuget/v/PayVelix.svg?label=PayVelix)](https://www.nuget.org/packages/PayVelix)
+[![PayVelix downloads](https://img.shields.io/nuget/dt/PayVelix.svg?label=downloads)](https://www.nuget.org/packages/PayVelix)
+[![PayVelix.Contracts NuGet](https://img.shields.io/nuget/v/PayVelix.Contracts.svg?label=PayVelix.Contracts)](https://www.nuget.org/packages/PayVelix.Contracts)
+[![PayVelix.Contracts downloads](https://img.shields.io/nuget/dt/PayVelix.Contracts.svg?label=contracts%20downloads)](https://www.nuget.org/packages/PayVelix.Contracts)
 
 PayVelix Client is a .NET 8 SDK for integrating applications with the PayVelix payment API. It provides a small typed wrapper around the payment endpoints and is designed to work with `HttpClientFactory` and Microsoft Dependency Injection.
 
