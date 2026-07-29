@@ -92,13 +92,13 @@ jobs:
       # - Repository owner: Payvelix
       # - Repository: Payvelix.DotNetSdk
       # - Workflow file: publish-nuget.yml
-      # - Package owner/user below must match the configured nuget.org owner.
+      # - Login user below must be the NuGet username that created this trust policy.
       # This workflow intentionally uses OIDC and does not use NuGet API-key secrets.
       - name: NuGet login
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          user: Payvelix
+          user: GitHubActions
 
       - name: Publish packages
         shell: bash
