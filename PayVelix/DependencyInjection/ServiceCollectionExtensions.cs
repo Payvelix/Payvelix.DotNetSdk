@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using PayVelix.Balance;
+using PayVelix.Internal;
 using PayVelix.Options;
 using PayVelix.Payments;
 
@@ -39,6 +40,12 @@ public static class ServiceCollectionExtensions
         httpClient.BaseAddress = new Uri(EnsureTrailingSlash(options.BaseUrl));
         httpClient.Timeout = options.Timeout;
         httpClient.DefaultRequestHeaders.Add("X-Api-Key", options.ApiKey);
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation(
+            "User-Agent",
+            $"PayVelix.DotNetSdk/{PayVelixSdkVersion.Current}");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation(
+            "X-SDK-Version",
+            PayVelixSdkVersion.Current);
         httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
     }

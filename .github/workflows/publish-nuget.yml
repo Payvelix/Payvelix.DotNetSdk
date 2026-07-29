@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -17,43 +18,116 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
+      # The package version comes from the tag (v1.2.3 -> 1.2.3), not from
+      # Directory.Build.props, so a stale hardcoded version can never be
+      # silently skipped by --skip-duplicate again.
+      - name: Set version from tag
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "PKG_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "This workflow must run from a v* tag or release; got $GITHUB_REF" >&2
+            exit 1
+          fi
+
       - name: Restore
         run: dotnet restore PayVelix.sln
 
       - name: Build
-        run: dotnet build PayVelix.sln -c Release --no-restore
+        run: dotnet build PayVelix.sln -c Release --no-restore -p:Version=$PKG_VERSION
 
       - name: Test
-        run: dotnet test PayVelix.sln -c Release --no-build --verbosity normal
+        run: dotnet test PayVelix.sln -c Release --no-build
 
-      - name: Pack contracts
-        run: dotnet pack PayVelix.Contracts/PayVelix.Contracts.csproj -c Release --no-build -o artifacts/packages
+      - name: Pack
+        run: dotnet pack PayVelix.sln -c Release --no-build -o artifacts/packages -p:Version=$PKG_VERSION
 
-      - name: Pack SDK
-        run: dotnet pack PayVelix/PayVelix.csproj -c Release --no-build -o artifacts/packages
+      - name: Normalize symbols packages
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import zipfile
 
-      # Add a repository secret named NUGET_API_KEY before publishing.
+          package_dir = Path("artifacts/packages")
+          for symbols_package in package_dir.glob("*.snupkg"):
+              package = symbols_package.with_suffix(".nupkg")
+              if not package.exists():
+                  continue
+
+              with zipfile.ZipFile(package) as package_zip:
+                  dll_names = {
+                      Path(name).stem
+                      for name in package_zip.namelist()
+                      if name.startswith("lib/") and name.endswith(".dll")
+                  }
+
+              temp_package = symbols_package.with_suffix(".snupkg.tmp")
+              with zipfile.ZipFile(symbols_package) as symbols_zip:
+                  with zipfile.ZipFile(temp_package, "w", zipfile.ZIP_DEFLATED) as output_zip:
+                      for item in symbols_zip.infolist():
+                          is_unmatched_pdb = (
+                              item.filename.startswith("lib/")
+                              and item.filename.endswith(".pdb")
+                              and Path(item.filename).stem not in dll_names
+                          )
+                          if is_unmatched_pdb:
+                              print(f"Removed unmatched symbol: {item.filename} from {symbols_package.name}")
+                              continue
+
+                          output_zip.writestr(item, symbols_zip.read(item.filename))
+
+              temp_package.replace(symbols_package)
+          PY
+
+      # NuGet.org Trusted Publishing must be configured before this workflow can publish:
+      # - Repository owner: Payvelix
+      # - Repository: Payvelix.DotNetSdk
+      # - Workflow file: publish-nuget.yml
+      # - Package owner/user below must match the configured nuget.org owner.
+      # This workflow intentionally uses OIDC and does not use NuGet API-key secrets.
+      - name: NuGet login
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: Payvelix
+
       - name: Publish packages
         shell: bash
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          if [ -z "$NUGET_API_KEY" ]; then
-            echo "NUGET_API_KEY repository secret is not configured."
-            exit 1
-          fi
+          packages=(
+            artifacts/packages/PayVelix.Contracts.*.nupkg
+            artifacts/packages/PayVelix.[0-9]*.nupkg
+          )
 
-          for package in artifacts/packages/*.nupkg; do
+          for package in "${packages[@]}"; do
             [ -f "$package" ] || continue
             dotnet nuget push "$package" \
-              --api-key "$NUGET_API_KEY" \
+              --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+
+      - name: Publish symbols
+        shell: bash
+        run: |
+          packages=(
+            artifacts/packages/PayVelix.Contracts.*.snupkg
+            artifacts/packages/PayVelix.[0-9]*.snupkg
+          )
+
+          for package in "${packages[@]}"; do
+            [ -f "$package" ] || continue
+            dotnet nuget push "$package" \
+              --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
               --source https://api.nuget.org/v3/index.json \
               --skip-duplicate
           done

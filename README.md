@@ -28,16 +28,26 @@ PayVelix.Client/
 - .NET SDK 8.0 or later
 - A valid PayVelix API key
 
-## Local Usage
+## Installation
 
-During development, reference the projects from your consuming application:
+Install the SDK package from NuGet:
+
+```powershell
+dotnet add package PayVelix --version 1.0.0
+```
+
+The shared contract package is published separately for advanced scenarios where applications only need DTOs and exceptions:
+
+```powershell
+dotnet add package PayVelix.Contracts --version 1.0.0
+```
+
+During local SDK development, reference the projects from your consuming application:
 
 ```powershell
 dotnet add <YourProject>.csproj reference .\PayVelix\PayVelix.csproj
 dotnet add <YourProject>.csproj reference .\PayVelix.Contracts\PayVelix.Contracts.csproj
 ```
-
-If this SDK is later published as a NuGet package, install the package instead of using local project references.
 
 ## Configuration
 
@@ -316,12 +326,29 @@ dotnet build .\PayVelix.sln
 dotnet test .\PayVelix.sln
 ```
 
+## Package Release
+
+Package versions are controlled by Git tags. Publishing a GitHub release or pushing a tag named `v1.2.3` publishes NuGet packages with version `1.2.3`.
+
+The publish workflow:
+
+- Restores, builds, and tests `PayVelix.sln` in Release mode.
+- Passes `-p:Version=$PKG_VERSION` to build and pack so package versions always match the tag.
+- Packs `PayVelix.Contracts` and `PayVelix`, including symbols packages.
+- Publishes `PayVelix.Contracts` before `PayVelix` so the SDK dependency is available first.
+- Uses NuGet.org Trusted Publishing through GitHub OIDC, not a `NUGET_API_KEY` repository secret.
+
+Before the first release, configure NuGet.org Trusted Publishing for repository `Payvelix/Payvelix.DotNetSdk`, workflow file `publish-nuget.yml`, and package owner `Payvelix`.
+
 ## Implementation Notes
 
 - `IPayVelixClient` is registered as scoped.
 - `IPayVelixBalanceClient` is registered with `AddHttpClient`.
 - `IPayVelixPaymentsClient` is registered with `AddHttpClient`.
 - `Accept: application/json` is added automatically.
+- `User-Agent: PayVelix.DotNetSdk/{version}` and `X-SDK-Version: {version}` are added automatically.
+- The SDK version is read from the assembly informational version, falling back to the assembly version.
 - `X-Api-Key` is built from `PayVelixOptions.ApiKey`.
 - `Idempotency-Key` is required for payment creation.
 - Empty or invalid successful API responses are converted to `PayVelixApiException`.
+

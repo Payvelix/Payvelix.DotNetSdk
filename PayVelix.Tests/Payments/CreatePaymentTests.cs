@@ -175,6 +175,10 @@ public sealed class CreatePaymentTests
         Assert.Equal("pv_sandbox_test_key", Assert.Single(values));
         Assert.True(handler.Request.Headers.TryGetValues("Idempotency-Key", out var idempotencyValues));
         Assert.Equal("order_123", Assert.Single(idempotencyValues));
+        Assert.True(handler.Request.Headers.TryGetValues("User-Agent", out var userAgentValues));
+        Assert.StartsWith("PayVelix.DotNetSdk/", Assert.Single(userAgentValues));
+        Assert.True(handler.Request.Headers.TryGetValues("X-SDK-Version", out var sdkVersionValues));
+        Assert.False(string.IsNullOrWhiteSpace(Assert.Single(sdkVersionValues)));
     }
 
     [Fact]
@@ -259,3 +263,4 @@ public sealed class CreatePaymentTests
         }
     }
 }
+
