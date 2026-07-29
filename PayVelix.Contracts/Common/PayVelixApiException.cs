@@ -14,8 +14,9 @@ public sealed class PayVelixApiException : Exception
         string message,
         HttpStatusCode statusCode,
         string? errorCode = null,
-        string? responseBody = null)
-        : base(message)
+        string? responseBody = null,
+        Exception? innerException = null)
+        : base(message, innerException)
     {
         StatusCode = statusCode;
         ErrorCode = errorCode;

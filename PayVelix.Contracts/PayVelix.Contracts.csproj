@@ -14,7 +14,7 @@
     <PackageProjectUrl>https://payvelix.com</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Initial public contracts for the PayVelix .NET SDK.</PackageReleaseNotes>
+    <PackageReleaseNotes>Contracts for the PayVelix .NET SDK 1.1.0 release.</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
     <IncludeSymbols>true</IncludeSymbols>

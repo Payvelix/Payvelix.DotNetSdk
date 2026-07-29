@@ -9,10 +9,12 @@ internal sealed class PayVelixPaymentsClient : IPayVelixPaymentsClient
     private const string CreatePaymentPath = "/api/Payments/Create";
 
     private readonly HttpClient _httpClient;
+    private readonly string _apiKey;
 
-    public PayVelixPaymentsClient(HttpClient httpClient)
+    public PayVelixPaymentsClient(HttpClient httpClient, string apiKey)
     {
         _httpClient = httpClient;
+        _apiKey = PayVelixConfigurationValidator.ValidateApiKey(apiKey);
     }
 
     public async Task<CreatePaymentResponse> CreateAsync(
@@ -51,6 +53,7 @@ internal sealed class PayVelixPaymentsClient : IPayVelixPaymentsClient
                 options: PayVelixHttp.JsonOptions)
         };
 
+        PayVelixHttp.AddApiKey(httpRequest, _apiKey);
         httpRequest.Headers.Add("Idempotency-Key", idempotencyKey);
 
         using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
@@ -65,7 +68,7 @@ internal sealed class PayVelixPaymentsClient : IPayVelixPaymentsClient
                 "create payment");
         }
 
-        throw PayVelixHttp.CreateApiException(response.StatusCode, responseBody);
+        throw PayVelixHttp.CreateApiException(response.StatusCode, responseBody, _apiKey);
     }
 
     public async Task<VerifyPaymentResponse> VerifyAsync(
@@ -96,7 +99,10 @@ internal sealed class PayVelixPaymentsClient : IPayVelixPaymentsClient
 
         var path = $"/api/Payments/{paymentId:D}/Verify";
 
-        using var response = await _httpClient.GetAsync(path, cancellationToken);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, path);
+        PayVelixHttp.AddApiKey(httpRequest, _apiKey);
+
+        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -108,6 +114,6 @@ internal sealed class PayVelixPaymentsClient : IPayVelixPaymentsClient
                 "verify payment");
         }
 
-        throw PayVelixHttp.CreateApiException(response.StatusCode, responseBody);
+        throw PayVelixHttp.CreateApiException(response.StatusCode, responseBody, _apiKey);
     }
 }

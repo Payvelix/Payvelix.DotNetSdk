@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PayVelix.Contracts.Common;
 using PayVelix.Contracts.Payments;
 using PayVelix.DependencyInjection;
+using PayVelix.Internal;
 using PayVelix.Payments;
 
 namespace PayVelix.Tests.Payments;
@@ -162,7 +163,7 @@ public sealed class CreatePaymentTests
             options.ApiKey = "pv_sandbox_test_key";
         });
         services
-            .AddHttpClient<IPayVelixPaymentsClient, PayVelixPaymentsClient>()
+            .AddHttpClient(PayVelixHttp.HttpClientName)
             .ConfigurePrimaryHttpMessageHandler(() => handler);
 
         using var serviceProvider = services.BuildServiceProvider();
@@ -215,7 +216,7 @@ public sealed class CreatePaymentTests
             BaseAddress = new Uri("https://api.payvelix.com")
         };
 
-        return new PayVelixPaymentsClient(httpClient);
+        return new PayVelixPaymentsClient(httpClient, "pv_test_key");
     }
 
     private static StringContent JsonContent(string json)

@@ -191,7 +191,7 @@ public sealed class VerifyPaymentTests
             BaseAddress = new Uri("https://api.payvelix.com")
         };
 
-        return new PayVelixPaymentsClient(httpClient);
+        return new PayVelixPaymentsClient(httpClient, "pv_test_key");
     }
 
     private static StringContent JsonContent(string json)

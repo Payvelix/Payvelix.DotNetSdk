@@ -6,10 +6,12 @@ namespace PayVelix.Balance;
 internal sealed class PayVelixBalanceClient : IPayVelixBalanceClient
 {
     private readonly HttpClient _httpClient;
+    private readonly string _apiKey;
 
-    public PayVelixBalanceClient(HttpClient httpClient)
+    public PayVelixBalanceClient(HttpClient httpClient, string apiKey)
     {
         _httpClient = httpClient;
+        _apiKey = PayVelixConfigurationValidator.ValidateApiKey(apiKey);
     }
 
     public async Task<BalanceResponse> GetAsync(
@@ -20,7 +22,10 @@ internal sealed class PayVelixBalanceClient : IPayVelixBalanceClient
             ? "/api/Balance"
             : $"/api/Balance?id={Uri.EscapeDataString(id)}";
 
-        using var response = await _httpClient.GetAsync(path, cancellationToken);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, path);
+        PayVelixHttp.AddApiKey(httpRequest, _apiKey);
+
+        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
 
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -32,6 +37,6 @@ internal sealed class PayVelixBalanceClient : IPayVelixBalanceClient
                 "balance");
         }
 
-        throw PayVelixHttp.CreateApiException(response.StatusCode, responseBody);
+        throw PayVelixHttp.CreateApiException(response.StatusCode, responseBody, _apiKey);
     }
 }

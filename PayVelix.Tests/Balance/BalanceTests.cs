@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PayVelix.Balance;
 using PayVelix.Contracts.Common;
 using PayVelix.DependencyInjection;
+using PayVelix.Internal;
 
 namespace PayVelix.Tests.Balance;
 
@@ -99,7 +100,7 @@ public sealed class BalanceTests
             options.ApiKey = "pv_test_key";
         });
         services
-            .AddHttpClient<IPayVelixBalanceClient, PayVelixBalanceClient>()
+            .AddHttpClient(PayVelixHttp.HttpClientName)
             .ConfigurePrimaryHttpMessageHandler(() => handler);
 
         using var serviceProvider = services.BuildServiceProvider();
@@ -119,7 +120,7 @@ public sealed class BalanceTests
             BaseAddress = new Uri("https://api.payvelix.com")
         };
 
-        return new PayVelixBalanceClient(httpClient);
+        return new PayVelixBalanceClient(httpClient, "pv_test_key");
     }
 
     private static StringContent JsonContent(string json)
