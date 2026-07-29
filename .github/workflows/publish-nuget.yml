@@ -1,0 +1,59 @@
+name: Publish NuGet
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Pack and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore PayVelix.sln
+
+      - name: Build
+        run: dotnet build PayVelix.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test PayVelix.sln -c Release --no-build --verbosity normal
+
+      - name: Pack contracts
+        run: dotnet pack PayVelix.Contracts/PayVelix.Contracts.csproj -c Release --no-build -o artifacts/packages
+
+      - name: Pack SDK
+        run: dotnet pack PayVelix/PayVelix.csproj -c Release --no-build -o artifacts/packages
+
+      # Add a repository secret named NUGET_API_KEY before publishing.
+      - name: Publish packages
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "NUGET_API_KEY repository secret is not configured."
+            exit 1
+          fi
+
+          for package in artifacts/packages/*.nupkg; do
+            [ -f "$package" ] || continue
+            dotnet nuget push "$package" \
+              --api-key "$NUGET_API_KEY" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
