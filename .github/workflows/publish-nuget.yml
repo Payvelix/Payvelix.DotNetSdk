@@ -98,7 +98,7 @@ jobs:
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          user: GitHubActions
+          user: Payvelix.Co
 
       - name: Publish packages
         shell: bash
